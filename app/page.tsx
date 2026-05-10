@@ -6,6 +6,10 @@ import { getEmployees } from '@/lib/api'
 import EmployeeCard from '@/components/EmployeeCard'
 import SearchBar from '@/components/SearchBar'
 import DepartmentFilter from '@/components/DepartmentFilter'
+import LoadingSkeleton from '@/components/LoadingSkeleton'
+import EmptyState from '@/components/EmptyState'
+import DarkMode from '@/components/DarkMode'
+import { Toaster } from '@/components/ui/sonner'
 import {
   Table,
   TableBody,
@@ -18,9 +22,13 @@ export default function Home() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [search, setSearch] = useState('')
   const [department, setDepartment] = useState('all')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getEmployees().then(setEmployees)
+    getEmployees().then((data) => {
+      setEmployees(data)
+      setLoading(false)
+    })
   }, [])
 
   const departments = [...new Set(employees.map((e) => e.department))]
@@ -36,33 +44,39 @@ export default function Home() {
 
   return (
     <main className="p-8">
-      <h1 className="text-2xl font-bold mb-6">Guardian Life Phonebook</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Guardian Life Phonebook</h1>
+        <DarkMode />
+      </div>
       <div className="flex gap-4 mb-6">
         <SearchBar value={search} onChange={setSearch} />
-        <DepartmentFilter
-          departments={departments}
-          value={department}
-          onChange={setDepartment}
-        />
+        <DepartmentFilter departments={departments} value={department} onChange={setDepartment} />
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>#</TableHead>
-            <TableHead>Full Name</TableHead>
-            <TableHead>Designation</TableHead>
-            <TableHead>Department</TableHead>
-            <TableHead>Mobile</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Extension</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filtered.map((employee, i) => (
-            <EmployeeCard key={employee.id} employee={employee} index={i + 1} />
-          ))}
-        </TableBody>
-      </Table>
+      {loading ? (
+        <LoadingSkeleton />
+      ) : filtered.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>#</TableHead>
+              <TableHead>Full Name</TableHead>
+              <TableHead>Designation</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead>Mobile</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Extension</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.map((employee, i) => (
+              <EmployeeCard key={employee.id} employee={employee} index={i + 1} />
+            ))}
+          </TableBody>
+        </Table>
+      )}
+      <Toaster />
     </main>
   )
 }
