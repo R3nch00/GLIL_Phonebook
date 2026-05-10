@@ -127,4 +127,7 @@
   html {
     @apply font-sans;
   }
+  tr {
+    transition: background-color 0.15s ease;
+  }
 }

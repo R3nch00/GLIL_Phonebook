@@ -1,7 +1,7 @@
 import { Employee } from '@/types/employee'
 
 export async function getEmployees(): Promise<Employee[]> {
-  const res = await fetch('/api/employees')
+  const res = await fetch('/api/employees', { cache: 'no-store' })
   if (!res.ok) throw new Error('Failed to fetch employees')
   return res.json()
 }
