@@ -7,38 +7,48 @@ import { Input } from '@/components/ui/input'
 import Image from 'next/image'
 import DarkMode from '@/components/DarkMode'
 import Clock from '@/components/Clock'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
   async function handleLogin() {
+    if (!username || !password) {
+      setError('Please enter username and password')
+      return
+    }
     setLoading(true)
     setError('')
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    })
-    const data = await res.json()
-    if (res.ok) {
-      router.push('/admin')
-    } else {
-      setError(data.error || 'Invalid credentials')
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        router.push('/admin')
+      } else {
+        setError(data.error || 'Invalid credentials')
+        setLoading(false)
+      }
+    } catch (err) {
+      setError('Something went wrong. Please try again.')
       setLoading(false)
     }
   }
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-muted/30">
-        <div className="absolute top-4 right-4 flex items-center gap-3">
-        <DarkMode />
+      <div className="absolute top-4 right-4 flex items-center gap-3">
         <Clock />
-        
-        </div>
+        <DarkMode />
+      </div>
       <div className="bg-background border rounded-xl p-8 w-full max-w-sm shadow-sm">
         <div className="flex flex-col items-center mb-6">
           <Image src="/logo.png" alt="Logo" width={48} height={48} className="mb-3" />
@@ -50,14 +60,25 @@ export default function AdminLogin() {
             placeholder="Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-          />
-          <Input
-            placeholder="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
           />
+          <div className="relative">
+            <Input
+              placeholder="Password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <Button onClick={handleLogin} disabled={loading} className="w-full">
             {loading ? 'Signing in...' : 'Sign In'}
