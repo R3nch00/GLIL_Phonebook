@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Image from 'next/image'
 import DarkMode from '@/components/DarkMode'
+import Clock from '@/components/Clock'
 
 export default function AdminLogin() {
   const [username, setUsername] = useState('')
@@ -33,8 +34,10 @@ export default function AdminLogin() {
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-muted/30">
-        <div className="absolute top-4 right-4">
-            <DarkMode />
+        <div className="absolute top-4 right-4 flex items-center gap-3">
+        <DarkMode />
+        <Clock />
+        
         </div>
       <div className="bg-background border rounded-xl p-8 w-full max-w-sm shadow-sm">
         <div className="flex flex-col items-center mb-6">
