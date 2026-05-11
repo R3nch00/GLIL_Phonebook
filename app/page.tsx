@@ -13,6 +13,7 @@ import DarkMode from '@/components/DarkMode'
 import { Toaster } from '@/components/ui/sonner'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import Clock from '@/components/Clock'
 import {
   Table,
   TableBody,
@@ -73,7 +74,9 @@ export default function Home() {
           <Link href="/admin/login">
             <Button variant="outline" size="sm">Sign In</Button>
           </Link>
+          
           <DarkMode />
+          <Clock />
         </div>
       </div>
 
