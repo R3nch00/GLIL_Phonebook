@@ -39,6 +39,24 @@ function PageButtons({ page, totalPages, onPage }: { page: number; totalPages: n
     if (page < totalPages - 2) pages.push('...')
     pages.push(totalPages)
   }
+
+  return (
+    <div className="flex gap-1">
+      {pages.map((p, i) =>
+        p === '...' ? (
+          <span key={`dots-${i}`} className="px-2 py-1 text-muted-foreground">...</span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPage(Number(p))}
+            className={`px-3 py-1 border rounded text-sm ${page === p ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'}`}
+          >
+            {p}
+          </button>
+        )
+      )}
+    </div>
+  )
 }
 
 export default function PhonebookTable({ employees, loading }: Props) {
