@@ -3,6 +3,7 @@ import { Employee } from '@/types/employee'
 import { TableCell, TableRow } from '@/components/ui/table'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { toast } from 'sonner'
+import { nullDisplay } from '@/components/phonebook/PhonebookTable'
 
 interface Props {
   employee: Employee

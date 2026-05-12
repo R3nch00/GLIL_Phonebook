@@ -8,7 +8,7 @@ interface Props {
 export default function SearchBar({ value, onChange }: Props) {
   return (
     <Input
-      placeholder="Search by name, department, designation..."
+      placeholder="Search all columns..."
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="max-w-md"

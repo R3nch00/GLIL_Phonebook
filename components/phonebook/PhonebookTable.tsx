@@ -20,25 +20,51 @@ interface Props {
   loading: boolean
 }
 
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
+function nullDisplay(value: string | null | undefined) {
+  return value?.trim()
+    ? value
+    : <span className="text-muted-foreground/40 border-b border-dashed border-muted-foreground/30">—</span>
+}
+
+function PageButtons({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (p: number) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+        <button
+          key={p}
+          onClick={() => onPage(p)}
+          className={`px-3 py-1 border rounded text-sm ${page === p ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'}`}
+        >
+          {p}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 export default function PhonebookTable({ employees, loading }: Props) {
   const [search, setSearch] = useState('')
   const [department, setDepartment] = useState('all')
   const [sortKey, setSortKey] = useState<keyof Employee | null>(null)
   const [sortAsc, setSortAsc] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
 
   function handleSort(key: keyof Employee) {
     if (sortKey === key) setSortAsc(!sortAsc)
     else { setSortKey(key); setSortAsc(true) }
+    setPage(1)
   }
 
   const departments = [...new Set(employees.map((e) => e.department).filter(Boolean))]
 
   const filtered = employees
     .filter((e) => {
-      const matchSearch =
-        (e.fullName ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (e.designation ?? '').toLowerCase().includes(search.toLowerCase()) ||
-        (e.department ?? '').toLowerCase().includes(search.toLowerCase())
+      const matchSearch = [e.fullName, e.designation, e.department, e.mobile, e.email, e.extension]
+        .map(v => (v ?? '').toLowerCase())
+        .some(v => v.includes(search.toLowerCase()))
       const matchDept = department === 'all' || e.department === department
       return matchSearch && matchDept
     })
@@ -49,11 +75,27 @@ export default function PhonebookTable({ employees, loading }: Props) {
         : (b[sortKey] ?? '').localeCompare(a[sortKey] ?? '')
     })
 
+  const totalPages = Math.ceil(filtered.length / pageSize)
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
+
   return (
     <>
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <SearchBar value={search} onChange={setSearch} />
-        <DepartmentFilter departments={departments} value={department} onChange={setDepartment} />
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 items-start sm:items-center justify-between">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1) }} />
+          <DepartmentFilter departments={departments} value={department} onChange={(v) => { setDepartment(v); setPage(1) }} />
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Rows per page:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
+            className="border rounded px-2 py-1 text-sm bg-background text-foreground"
+          >
+            {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <span>{filtered.length} results</span>
+        </div>
       </div>
 
       {loading ? (
@@ -62,6 +104,7 @@ export default function PhonebookTable({ employees, loading }: Props) {
         <EmptyState />
       ) : (
         <>
+          {/* Desktop table */}
           <div className="hidden md:block rounded-md border w-full overflow-hidden">
             <Table className="table-fixed w-full">
               <TableHeader>
@@ -88,28 +131,49 @@ export default function PhonebookTable({ employees, loading }: Props) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((employee, i) => (
-                  <EmployeeCard key={employee.id} employee={employee} index={i + 1} />
+                {paginated.map((employee, i) => (
+                  <EmployeeCard key={employee.id} employee={employee} index={(page - 1) * pageSize + i + 1} />
                 ))}
               </TableBody>
             </Table>
           </div>
 
+          {/* Mobile cards */}
           <div className="md:hidden flex flex-col gap-3">
-            {filtered.map((employee, i) => (
+            {paginated.map((employee, i) => (
               <div key={employee.id} className="border rounded-lg p-4 text-sm">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-muted-foreground text-xs">{i + 1}</span>
+                  <span className="text-muted-foreground text-xs">{(page - 1) * pageSize + i + 1}</span>
                   <span className="font-medium">{employee.fullName}</span>
                 </div>
-                <div className="text-muted-foreground text-xs mb-1">{employee.designation} · {employee.department}</div>
+                <div className="text-muted-foreground text-xs mb-1">
+                  {nullDisplay(employee.designation)} · {nullDisplay(employee.department)}
+                </div>
                 <div className="flex flex-col gap-1 mt-2">
-                  {employee.mobile && <span>{employee.mobile}</span>}
-                  {employee.email && <span>{employee.email}</span>}
+                  <span>{nullDisplay(employee.mobile)}</span>
+                  <span>{nullDisplay(employee.email)}</span>
                   {employee.extension && <span>Ext: {employee.extension}</span>}
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Pagination */}
+          <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3 text-sm text-muted-foreground">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-muted"
+              >Previous</button>
+              <PageButtons page={page} totalPages={totalPages} onPage={setPage} />
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-muted"
+              >Next</button>
+            </div>
           </div>
         </>
       )}
