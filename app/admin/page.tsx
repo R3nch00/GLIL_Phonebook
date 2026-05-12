@@ -15,6 +15,7 @@ import Clock from '@/components/Clock'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 import { AdminEmployee } from '@/types/employee'
@@ -35,6 +36,30 @@ function copyToClipboard(value: string, label: string) {
   toast(`${label} copied to clipboard`)
 }
 
+function nullDisplay(value: string | null | undefined) {
+  return value?.trim()
+    ? value
+    : <span className="text-muted-foreground/40 border-b border-dashed border-muted-foreground/30">—</span>
+}
+
+function PageButtons({ page, totalPages, onPage }: { page: number; totalPages: number; onPage: (p: number) => void }) {
+  return (
+    <div className="flex flex-wrap gap-1">
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+        <button
+          key={p}
+          onClick={() => onPage(p)}
+          className={`px-3 py-1 border rounded text-sm ${page === p ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'}`}
+        >
+          {p}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
+
 export default function AdminDashboard() {
   const [employees, setEmployees] = useState<AdminEmployee[]>([])
   const [search, setSearch] = useState('')
@@ -42,6 +67,8 @@ export default function AdminDashboard() {
   const [editing, setEditing] = useState<AdminEmployee | null>(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
   const router = useRouter()
 
   useEffect(() => { loadEmployees() }, [])
@@ -75,13 +102,16 @@ export default function AdminDashboard() {
   const noEmail = employees.filter((e) => !e.email)
   const noMobile = employees.filter((e) => !e.cell_phone)
 
-  const filtered = employees
-    .filter((e) => {
-      const matchSearch = `${e.first_name} ${e.last_name} ${e.department} ${e.designation} ${e.email} ${e.cell_phone}`
-        .toLowerCase().includes(search.toLowerCase())
-      const matchDept = department === 'all' || e.department === department
-      return matchSearch && matchDept
-    })
+  const filtered = employees.filter((e) => {
+    const matchSearch = [e.first_name, e.last_name, e.department, e.designation, e.email, e.cell_phone, e.work_phone, e.ip_address]
+      .map(v => (v ?? '').toLowerCase())
+      .some(v => v.includes(search.toLowerCase()))
+    const matchDept = department === 'all' || e.department === department
+    return matchSearch && matchDept
+  })
+
+  const totalPages = Math.ceil(filtered.length / pageSize)
+  const paginated = filtered.slice((page - 1) * pageSize, page * pageSize)
 
   return (
     <main className="min-h-screen bg-muted/20">
@@ -124,29 +154,38 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row gap-3 mb-4 items-start sm:items-center justify-between">
           <div className="flex gap-3">
             <Input
-              placeholder="Search employees..."
+              placeholder="Search all columns..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               className="max-w-sm"
             />
-
-    <Select value={department} onValueChange={setDepartment}>
-    <SelectTrigger className="w-48">
-        <SelectValue placeholder="All Departments" />
-    </SelectTrigger>
-    <SelectContent>
-        <SelectItem value="all">All Departments</SelectItem>
-        {departments.map((d) => (
-        <SelectItem key={d} value={d}>{d}</SelectItem>
-        ))}
-    </SelectContent>
-    </Select>
+            <Select value={department} onValueChange={(v) => { setDepartment(v); setPage(1) }}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="All Departments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
+                {departments.map((d) => (
+                  <SelectItem key={d} value={d}>{d}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <p className="text-sm text-muted-foreground">{filtered.length} results</p>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Rows per page:</span>
+            <select
+              value={pageSize}
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
+              className="border rounded px-2 py-1 text-sm bg-background text-foreground"
+            >
+              {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+            </select>
+            <span>{filtered.length} results</span>
+          </div>
         </div>
 
-        {/* Table */}
-        <div className="rounded-md border bg-background overflow-x-auto">
+        {/* Desktop Table */}
+        <div className="hidden md:block rounded-md border bg-background overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
@@ -164,12 +203,20 @@ export default function AdminDashboard() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">Loading...</td></tr>
+                Array.from({ length: 8 }).map((_, i) => (
+                  <tr key={i} className="border-b">
+                    {Array.from({ length: 10 }).map((_, j) => (
+                      <td key={j} className="p-3">
+                        <Skeleton className="h-4 w-full" />
+                      </td>
+                    ))}
+                  </tr>
+                ))
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={10} className="p-6 text-center text-muted-foreground">No employees found</td></tr>
-              ) : filtered.map((e, i) => (
+              ) : paginated.map((e, i) => (
                 <tr key={e.id} className="border-b hover:bg-muted/30 transition-colors">
-                  <td className="p-3 text-muted-foreground text-xs">{i + 1}</td>
+                  <td className="p-3 text-muted-foreground text-xs">{(page - 1) * pageSize + i + 1}</td>
                   <td className="p-3">
                     <div className="flex items-center gap-2">
                       <Avatar className="h-7 w-7 shrink-0">
@@ -180,12 +227,12 @@ export default function AdminDashboard() {
                       <span className="font-medium whitespace-nowrap">{e.first_name} {e.last_name}</span>
                     </div>
                   </td>
-                  <td className="p-3 max-w-[130px] truncate">{e.designation}</td>
-                  <td className="p-3 max-w-[130px] truncate">{e.department}</td>
-                  <td className="p-3 whitespace-nowrap cursor-pointer hover:text-blue-500" onClick={() => copyToClipboard(e.cell_phone, 'Mobile')}>{e.cell_phone}</td>
-                  <td className="p-3 max-w-[160px] truncate cursor-pointer hover:text-blue-500" onClick={() => copyToClipboard(e.email, 'Email')}>{e.email}</td>
-                  <td className="p-3 cursor-pointer hover:text-blue-500" onClick={() => copyToClipboard(e.work_phone, 'Extension')}>{e.work_phone}</td>
-                  <td className="p-3 text-muted-foreground cursor-pointer hover:text-blue-500" onClick={() => copyToClipboard(e.ip_address, 'IP Address')}>{e.ip_address}</td>
+                  <td className="p-3 max-w-[130px] truncate">{nullDisplay(e.designation)}</td>
+                  <td className="p-3 max-w-[130px] truncate">{nullDisplay(e.department)}</td>
+                  <td className="p-3 whitespace-nowrap cursor-pointer hover:text-blue-500" onClick={() => copyToClipboard(e.cell_phone, 'Mobile')}>{nullDisplay(e.cell_phone)}</td>
+                  <td className="p-3 max-w-[160px] truncate cursor-pointer hover:text-blue-500" onClick={() => copyToClipboard(e.email, 'Email')}>{nullDisplay(e.email)}</td>
+                  <td className="p-3 cursor-pointer hover:text-blue-500" onClick={() => copyToClipboard(e.work_phone, 'Extension')}>{nullDisplay(e.work_phone)}</td>
+                  <td className="p-3 text-muted-foreground cursor-pointer hover:text-blue-500" onClick={() => copyToClipboard(e.ip_address, 'IP Address')}>{nullDisplay(e.ip_address)}</td>
                   <td className="p-3 text-muted-foreground whitespace-nowrap text-xs">
                     {e.modified_date ? new Date(e.modified_date).toLocaleDateString() : '—'}
                   </td>
@@ -197,40 +244,93 @@ export default function AdminDashboard() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden flex flex-col gap-3">
+          {loading ? (
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="border rounded-lg p-4">
+                <Skeleton className="h-4 w-1/2 mb-2" />
+                <Skeleton className="h-3 w-1/3 mb-3" />
+                <Skeleton className="h-3 w-full mb-1" />
+                <Skeleton className="h-3 w-full mb-1" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+            ))
+          ) : filtered.length === 0 ? (
+            <div className="text-center text-muted-foreground py-12">No employees found</div>
+          ) : paginated.map((e, i) => (
+            <div key={e.id} className="border rounded-lg p-4 text-sm bg-background">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-7 w-7 shrink-0">
+                    <AvatarFallback className={`text-white text-xs ${getAvatarColor(e.first_name)}`}>
+                      {getInitials(e.first_name, e.last_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-medium">{e.first_name} {e.last_name}</p>
+                    <p className="text-xs text-muted-foreground">{(page - 1) * pageSize + i + 1}</p>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => setEditing({ ...e })}>Edit</Button>
+              </div>
+              <div className="text-muted-foreground text-xs mb-2">
+                {nullDisplay(e.designation)} · {nullDisplay(e.department)}
+              </div>
+              <div className="flex flex-col gap-1">
+                <span onClick={() => copyToClipboard(e.cell_phone, 'Mobile')} className="cursor-pointer hover:text-blue-500">{nullDisplay(e.cell_phone)}</span>
+                <span onClick={() => copyToClipboard(e.email, 'Email')} className="cursor-pointer hover:text-blue-500">{nullDisplay(e.email)}</span>
+                <span onClick={() => copyToClipboard(e.work_phone, 'Extension')} className="cursor-pointer hover:text-blue-500">Ext: {nullDisplay(e.work_phone)}</span>
+                <span onClick={() => copyToClipboard(e.ip_address, 'IP')} className="cursor-pointer hover:text-blue-500 text-muted-foreground text-xs">IP: {nullDisplay(e.ip_address)}</span>
+                <span className="text-muted-foreground text-xs">
+                  Modified: {e.modified_date ? new Date(e.modified_date).toLocaleDateString() : '—'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Pagination */}
+        {!loading && filtered.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between mt-4 gap-3 text-sm text-muted-foreground">
+            <span>Page {page} of {totalPages}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-muted">Previous</button>
+              <PageButtons page={page} totalPages={totalPages} onPage={setPage} />
+              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+                className="px-3 py-1 border rounded disabled:opacity-40 hover:bg-muted">Next</button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Edit Modal */}
       {editing && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-background rounded-xl border shadow-lg w-full max-w-md p-6">
-            <h2 className="text-lg font-semibold mb-1">Edit Employee</h2>
+          <div className="bg-background rounded-xl border shadow-lg w-full max-w-sm p-6">
+            <h2 className="text-lg font-semibold mb-1">Edit Record</h2>
             <p className="text-sm text-muted-foreground mb-4">{editing.first_name} {editing.last_name}</p>
+            <div className="flex flex-col gap-2 mb-4 p-3 bg-muted/30 rounded-lg">
+              <p className="text-xs text-muted-foreground font-medium mb-1">Read-only information</p>
+              {[
+                { label: 'Full Name', value: `${editing.first_name} ${editing.last_name}` },
+                { label: 'Designation', value: editing.designation },
+                { label: 'Department', value: editing.department },
+                { label: 'Mobile', value: editing.cell_phone },
+                { label: 'Email', value: editing.email },
+              ].map(({ label, value }) => (
+                <div key={label} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground text-xs">{label}</span>
+                  <span className="text-muted-foreground text-xs">{value || '—'}</span>
+                </div>
+              ))}
+            </div>
             <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">First Name</label>
-                  <Input value={editing.first_name} onChange={(e) => setEditing({ ...editing, first_name: e.target.value })} />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Last Name</label>
-                  <Input value={editing.last_name} onChange={(e) => setEditing({ ...editing, last_name: e.target.value })} />
-                </div>
-              </div>
               <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Designation</label>
-                <Input value={editing.designation ?? ''} onChange={(e) => setEditing({ ...editing, designation: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Department</label>
-                <Input value={editing.department ?? ''} onChange={(e) => setEditing({ ...editing, department: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Mobile</label>
-                <Input value={editing.cell_phone ?? ''} onChange={(e) => setEditing({ ...editing, cell_phone: e.target.value })} />
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground mb-1 block">Email</label>
-                <Input value={editing.email ?? ''} onChange={(e) => setEditing({ ...editing, email: e.target.value })} />
+                <label className="text-xs text-muted-foreground mb-1 block">IP Address</label>
+                <Input value={editing.ip_address ?? ''} onChange={(e) => setEditing({ ...editing, ip_address: e.target.value })} />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">Extension</label>

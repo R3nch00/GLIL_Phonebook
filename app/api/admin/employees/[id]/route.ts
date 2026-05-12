@@ -7,15 +7,13 @@ export async function PUT(
 ) {
   try {
     const { id } = await params
-    const { first_name, last_name, designation, department, cell_phone, email, work_phone } = await req.json()
-    
+    const { ip_address, work_phone } = await req.json()
+
     const [result]: any = await pool.query(
-      `UPDATE contact SET first_name=?, last_name=?, designation=?, department=?,
-       cell_phone=?, email=?, work_phone=?, modified_date=NOW() WHERE id=?`,
-      [first_name, last_name, designation, department, cell_phone, email, work_phone, id]
+      `UPDATE contact SET ip_address=?, work_phone=?, modified_date=NOW() WHERE id=?`,
+      [ip_address, work_phone, id]
     )
 
-    console.log('affectedRows:', result.affectedRows)
     return NextResponse.json({ success: true, affectedRows: result.affectedRows })
   } catch (error) {
     console.error(error)
