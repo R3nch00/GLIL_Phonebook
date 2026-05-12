@@ -1,20 +1,56 @@
 import { NextResponse } from 'next/server'
-import pool from '@/lib/db'
+
+import { searchEmployees } from '@/lib/ldap'
+
+
+
+function getAttr(attrs: any[], name: string): string {
+
+ const found = attrs.find((a: any) => a.type === name)
+
+ return found?.values?.[0] ?? ''
+
+}
+
+
 
 export async function GET() {
-  try {
-    const [rows] = await pool.query(
-      `SELECT id, CONCAT(first_name, ' ', last_name) as fullName,
-       designation, department, cell_phone as mobile,
-       email, work_phone as extension
-       FROM contact
-       WHERE first_name != '' AND last_name != ''
-       ORDER BY department, first_name`
-    )
-    return NextResponse.json(rows, {
-      headers: { 'Cache-Control': 'no-store' }
-    })
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch employees' }, { status: 500 })
-  }
+
+ try {
+const entries = await searchEmployees()
+
+
+
+const employees = entries.map((attrs, index) => ({
+
+   id: String(index),
+
+fullName: getAttr(attrs, 'displayName') || getAttr(attrs, 'cn'),
+
+ designation: getAttr(attrs, 'title'),
+
+ department: getAttr(attrs, 'department'),
+ mobile: getAttr(attrs, 'mobile'),
+ email: getAttr(attrs, 'mail'),
+
+ extension: getAttr(attrs, 'telephoneNumber'),
+
+ }))
+
+
+
+return NextResponse.json(employees, {
+
+ headers: { 'Cache-Control': 'no-store' }
+
+ })
+
+} catch (error) {
+
+ console.error('LDAP error:', error)
+
+return NextResponse.json({ error: 'Failed to fetch from LDAP' }, { status: 500 })
+
+ }
+
 }
