@@ -14,6 +14,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface Props {
   employees: Employee[]
@@ -101,13 +108,16 @@ export default function PhonebookTable({ employees, loading }: Props) {
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <span>Rows per page:</span>
-          <select
-            value={pageSize}
-            onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1) }}
-            className="border rounded px-2 py-1 text-sm bg-background text-foreground"
-          >
-            {PAGE_SIZE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
-          </select>
+          <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1) }}>
+            <SelectTrigger className="w-20 h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PAGE_SIZE_OPTIONS.map(n => (
+                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <span>{filtered.length} results</span>
         </div>
       </div>
