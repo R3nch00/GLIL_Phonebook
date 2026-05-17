@@ -22,7 +22,7 @@ interface Props {
 
 const PAGE_SIZE_OPTIONS = [10, 25, 50, 100]
 
-function nullDisplay(value: string | null | undefined) {
+export function nullDisplay(value: string | null | undefined) {
   return value?.trim()
     ? value
     : <span className="text-muted-foreground/40 border-b border-dashed border-muted-foreground/30">—</span>
@@ -73,9 +73,8 @@ export default function PhonebookTable({ employees, loading }: Props) {
     setPage(1)
   }
 
-  const departments = [...new Set(employees.map((e) => e.department).filter(Boolean))]
-
-  const filtered = employees
+  const departments = [...new Set((employees ?? []).map((e) => e.department).filter(Boolean))]
+  const filtered = (employees ?? [])
     .filter((e) => {
       const matchSearch = [e.fullName, e.designation, e.department, e.mobile, e.email, e.extension]
         .map(v => (v ?? '').toLowerCase())

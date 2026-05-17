@@ -21,6 +21,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { toast } from 'sonner'
 import { AdminEmployee } from '@/types/employee'
 import { fetchAdminEmployees, updateEmployee, logoutAdmin } from '@/lib/adminApi'
+import ProfileModal from '@/components/shared/ProfileModal'
 
 function getInitials(first: string, last: string) {
   return `${first?.[0] ?? ''}${last?.[0] ?? ''}`.toUpperCase()
@@ -82,6 +83,7 @@ export default function AdminDashboard() {
   const [search, setSearch] = useState('')
   const [department, setDepartment] = useState('all')
   const [editing, setEditing] = useState<AdminEmployee | null>(null)
+  const [profile, setProfile] = useState<AdminEmployee | null>(null)  // add here
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
@@ -275,8 +277,12 @@ export default function AdminDashboard() {
                           {getInitials(e.first_name, e.last_name)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium whitespace-nowrap">{e.first_name} {e.last_name}</span>
-                    </div>
+                        <span
+                          className="font-medium whitespace-nowrap cursor-pointer hover:text-blue-500 hover:underline"
+                          onClick={() => setProfile(e)}
+                        >
+                          {e.first_name} {e.last_name}
+                        </span>                    </div>
                   </td>
                   <td className="p-3 max-w-[130px] truncate">{nullDisplay(e.designation)}</td>
                   <td className="p-3 max-w-[130px] truncate">{nullDisplay(e.department)}</td>
@@ -396,6 +402,17 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      )}
+      {profile && (
+        <ProfileModal
+          name={`${profile.first_name} ${profile.last_name}`}
+          designation={profile.designation}
+          department={profile.department}
+          mobile={profile.cell_phone}
+          email={profile.email}
+          extension={profile.work_phone}
+          onClose={() => setProfile(null)}
+        />
       )}
     </main>
   )
