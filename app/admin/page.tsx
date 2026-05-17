@@ -372,9 +372,9 @@ export default function AdminDashboard() {
                 { label: 'Mobile', value: editing.cell_phone },
                 { label: 'Email', value: editing.email },
               ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between text-sm">
+                <div key={label} className="flex flex-col gap-0.5">
                   <span className="text-muted-foreground text-xs">{label}</span>
-                  <span className="text-muted-foreground text-xs">{value || '—'}</span>
+                  <span className="text-xs break-words">{value || '—'}</span>
                 </div>
               ))}
             </div>
