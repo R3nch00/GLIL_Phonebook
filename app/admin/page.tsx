@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import * as XLSX from 'xlsx'
 import {
   Select,
   SelectContent,
@@ -53,6 +54,8 @@ function PageButtons({ page, totalPages, onPage }: { page: number; totalPages: n
     if (page < totalPages - 2) pages.push('...')
     pages.push(totalPages)
   }
+
+
 
   return (
     <div className="flex gap-1">
@@ -107,6 +110,37 @@ export default function AdminDashboard() {
     toast('Employee updated successfully')
     loadEmployees()
   }
+
+  async function downloadXML() {
+    const res = await fetch('/api/admin/export/xml', { method: 'POST' })
+    const data = await res.json()
+    if (data.success) {
+      toast('XML file saved to phonebook-xml/phonebook.xml')
+    } else {
+      toast('Failed to generate XML')
+    }
+  }
+
+  function downloadExcel() {
+    const data = employees.map((e, i) => ({
+      '#': i + 1,
+      'First Name': e.first_name ?? '',
+      'Last Name': e.last_name ?? '',
+      'Designation': e.designation ?? '',
+      'Department': e.department ?? '',
+      'Mobile': e.cell_phone ?? '',
+      'Email': e.email ?? '',
+      'Extension': e.work_phone ?? '',
+      'IP Address': e.ip_address ?? '',
+      'Modified Date': e.modified_date ? new Date(e.modified_date).toLocaleDateString() : '',
+    }))
+
+    const ws = XLSX.utils.json_to_sheet(data)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Employees')
+    XLSX.writeFile(wb, `phonebook_${new Date().toISOString().split('T')[0]}.xlsx`)
+  }
+  
 
   const departments = [...new Set(employees.map((e) => e.department).filter(Boolean))]
   const modifiedToday = employees.filter((e) => {
@@ -186,6 +220,9 @@ export default function AdminDashboard() {
             </Select>
           </div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Button variant="outline" size="sm" onClick={downloadXML}>Generate XML</Button>
+            <Button variant="outline" size="sm" onClick={downloadExcel}>Download Excel</Button>
+            
             <span>Rows per page:</span>
             <select
               value={pageSize}
